@@ -210,11 +210,12 @@ public class RESTBundleActivator
      * to {@code servletContextHandler}
      */
     private ServletHolder initializeLongPollingServlet(
+            BundleContext bundleContext,
             ServletContextHandler servletContextHandler)
     {
         ServletHolder holder = new ServletHolder();
 
-        holder.setServlet(new LongPollingServlet());
+        holder.setServlet(new LongPollingServlet(bundleContext));
 
         // The rules for mappings of the Servlet specification do not allow path
         // matching in the middle of the path.
@@ -418,7 +419,7 @@ public class RESTBundleActivator
             b = true;
 
         // LongPollingServlet
-        servletHolder = initializeLongPollingServlet(servletContextHandler);
+        servletHolder = initializeLongPollingServlet(bundleContext, servletContextHandler);
         if (servletHolder != null)
             b = true;
 
