@@ -100,6 +100,20 @@ public class Videobridge
         = "org.jitsi.videobridge.MEDIA_RECORDING_TOKEN";
 
     /**
+     * If an endpoint is provided at time of channel creation, use the
+     * endpoint for the channel id
+     */
+    public static final String USE_ENDPOINT_FOR_CHANNEL_ID
+            = "org.jitsi.videobridge.USE_ENDPOINT_FOR_CHANNEL_ID";
+
+    /**
+     * If a name is provided at time of conference creation
+     * use the name for the conference id
+     */
+    public static final String USE_NAME_FOR_CONFERENCE_ID
+            = "org.jitsi.videobridge.USE_NAME_FOR_CONFERENCE_ID";
+
+    /**
      * The optional flag which specifies to
      * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)} that
      * <tt>ColibriConferenceIQ</tt>s can be accessed by any peer(not only by the
@@ -193,6 +207,18 @@ public class Videobridge
     private int defaultProcessingOptions;
 
     /**
+     * If an endpoint is provided at time of channel creation, use the
+     * endpoint for the channel id
+     */
+    private boolean useEndpointForChannelId = false;
+
+    /**
+     * If a name is provided at time of conference creation
+     * use the name for the conference id
+     */
+    private boolean useNameForConferenceId = false;
+
+    /**
      * Indicates if this bridge instance has entered graceful shutdown mode.
      */
     private boolean shutdownInProgress;
@@ -232,8 +258,11 @@ public class Videobridge
      * @param name world readable name of the conference to create.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
+     * @throws Exception throws an exception if a conference already
+     * exists by the name that is provided and the configuration is set to
+     * use the name as the id
      */
-    public Conference createConference(String focus, String name)
+    public Conference createConference(String focus, String name) throws Exception
     {
         return this.createConference(focus, name, /* enableLogging */ true);
     }
@@ -256,18 +285,35 @@ public class Videobridge
      * the {@link Conference}.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
+     * @throws Exception throws an exception if a conference already
+     * exists by the name that is provided and the configuration is set to
+     * use the name as the id
      */
     public Conference createConference(
-        String focus, String name, boolean enableLogging)
+        String focus, String name, boolean enableLogging) throws Exception
     {
         Conference conference = null;
 
         do
         {
-            String id = generateConferenceID();
-
             synchronized (conferences)
             {
+                String id;
+                if(useNameForConferenceId && !StringUtils.isNullOrEmpty(name))
+                {
+                    if (conferences.containsKey(name))
+                    {
+                        throw new Exception(String.format("Cannot create " +
+                                "conference, conference already exists by id:" +
+                                " %s", name));
+                    }
+                    id = name;
+                }
+                else
+                {
+                    id = generateConferenceID();
+                }
+
                 if (!conferences.containsKey(id))
                 {
                     conference
@@ -795,7 +841,8 @@ public class Videobridge
                                 channelBundleId,
                                 transportNamespace,
                                 channelIQ.isInitiator(),
-                                channelIQ.getRTPLevelRelayType());
+                                channelIQ.getRTPLevelRelayType(),
+                            useEndpointForChannelId ? channelIQ.getEndpoint() : null);
 
                     if (channel == null)
                     {
@@ -983,7 +1030,8 @@ public class Videobridge
                                     endpoint,
                                     sctpPort,
                                     channelBundleId,
-                                    sctpConnIq.isInitiator());
+                                    sctpConnIq.isInitiator(),
+                                useEndpointForChannelId ? sctpConnIq.getEndpoint() : null);
                         if (sctpConn == null)
                         {
                             return IQUtils.createError(
@@ -1302,6 +1350,12 @@ public class Videobridge
             = ServiceUtils2.getService(
                     bundleContext,
                     ConfigurationService.class);
+
+        useEndpointForChannelId = (cfg != null) &&
+                cfg.getBoolean(USE_ENDPOINT_FOR_CHANNEL_ID, false);
+
+        useNameForConferenceId = (cfg != null) &&
+                cfg.getBoolean(USE_NAME_FOR_CONFERENCE_ID, false);
 
         defaultProcessingOptions
             = (cfg == null)

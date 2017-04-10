@@ -219,23 +219,40 @@ public class Content
      * @param initiator the value to use for the initiator field, or
      * <tt>null</tt> to use the default value.
      * @param rtpLevelRelayType
+     * @param endpointId the id of the endpoint this channel is for, if provided
+     * the endpoint id will be used as the channel id
      * @return the created <tt>RtpChannel</tt> instance.
      * @throws Exception
      */
     public RtpChannel createRtpChannel(String channelBundleId,
                                        String transportNamespace,
                                        Boolean initiator,
-                                       RTPLevelRelayType rtpLevelRelayType)
+                                       RTPLevelRelayType rtpLevelRelayType,
+                                       String endpointId)
         throws Exception
     {
         RtpChannel channel = null;
 
         do
         {
-            String id = generateChannelID();
-
             synchronized (channels)
             {
+                String id;
+                if(!StringUtils.isNullOrEmpty(endpointId))
+                {
+                    if (channels.containsKey(endpointId))
+                    {
+                        throw new Exception(String.format("Cannot create channel " +
+                                        "for endpoint %s, channel already exists",
+                                endpointId));
+                    }
+                    id = endpointId;
+                }
+                else
+                {
+                    id = generateChannelID();
+                }
+
                 if (!channels.containsKey(id))
                 {
                     switch (getMediaType())
@@ -322,14 +339,29 @@ public class Content
             Endpoint endpoint,
             int sctpPort,
             String channelBundleId,
-            Boolean initiator)
+            Boolean initiator,
+            String endpointId)
         throws Exception
     {
         SctpConnection sctpConnection;
 
         synchronized (channels)
         {
-            String id = generateChannelID();
+            String id;
+            if(!StringUtils.isNullOrEmpty(endpointId))
+            {
+                if (channels.containsKey(endpointId))
+                {
+                    throw new Exception(String.format("Cannot create channel " +
+                                    "for endpoint %s, channel already exists",
+                            endpointId));
+                }
+                id = endpointId;
+            }
+            else
+            {
+                id = generateChannelID();
+            }
 
             sctpConnection
                 = new SctpConnection(id, this, endpoint, sctpPort,
