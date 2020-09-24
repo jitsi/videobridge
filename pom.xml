@@ -35,6 +35,7 @@
     </properties>
 
     <modules>
+        <module>jitsi-media-transform</module>
         <module>jvb-api</module>
         <module>jvb</module>
     </modules>
@@ -79,7 +80,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-media-transform</artifactId>
-                <version>1.0-190-g2da25f6</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
